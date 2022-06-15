@@ -16,10 +16,10 @@ font.init()
 
 # Configuration
 FPS = 30
-MAX_SCORE = 30
+MAX_SCORE = 10
 PLAYER_SPEED = 10
 BALL_SPEED = 7
-SCREEN_SIZE = [1600, 900]
+SCREEN_SIZE = [800, 600]
 
 # Colors
 C_WHITE = (255,255,255)
