@@ -3,6 +3,8 @@ from pygame import time
 from pygame import draw
 from pygame import font
 import random
+import os
+import sys
 
 """
 Pong
@@ -13,6 +15,12 @@ Remake of classic game by cd-con(eel-primo), 2022
 # Init
 pygame.init()
 font.init()
+
+# Import for Pyinstaller
+def resource_path(relative):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative)
+    return os.path.join(relative)
 
 # Configuration
 FPS = 30
@@ -26,7 +34,7 @@ C_WHITE = (255,255,255)
 C_GRAY = (128,128,128)
 
 # TODO make custom 8-bit font
-FONT = pygame.font.Font('font.ttf', 30)
+FONT = pygame.font.Font(resource_path('font.ttf'), 30)
 
 # Setup pygame window
 GAME_RUNNING = True
@@ -44,18 +52,12 @@ ball_pos = [300,200]
 ball_dir = [False, False]
 bounce_count = 0
 
-# Draw score on screen
-def draw_score():
-    GAME_DISPLAY.blit(FONT.render(str(player1_score), False, C_WHITE), (SCREEN_SIZE[0] / 4, 10))
-    GAME_DISPLAY.blit(FONT.render(str(player2_score), False, C_WHITE), (SCREEN_SIZE[0] * 3 / 4 - 24, 10))
-
 # Restart game
 def restart_game(reset_count = False):
     global player1_pos, player2_pos, player1_score, player2_score, ball_pos, ball_dir
     player1_pos, player2_pos = SCREEN_SIZE[1] / 2 - PLAYER_SIZE[1] / 2, SCREEN_SIZE[1] / 2 - PLAYER_SIZE[1] / 2
     ball_pos = [SCREEN_SIZE[0] / 2,SCREEN_SIZE[1] / 2 + 50 * random.randint(-2,2)]
     if reset_count: player1_score, player2_score = 0, 0; ball_dir = [bool(random.getrandbits(1)), bool(random.getrandbits(1))]
-
 
 restart_game()
 
@@ -65,9 +67,7 @@ while GAME_RUNNING:
     GAME_DISPLAY.fill((0,0,0))
 
     """
-    Proceed keyboard input
-    (And player control)
-
+    Proceed keyboard input and player control
     Not the best solution
     """
     keys = pygame.key.get_pressed()
@@ -160,7 +160,8 @@ while GAME_RUNNING:
     """        
     
     # Draw UI
-    draw_score()
+    GAME_DISPLAY.blit(FONT.render(str(player1_score), False, C_WHITE), (SCREEN_SIZE[0] / 4, 10))
+    GAME_DISPLAY.blit(FONT.render(str(player2_score), False, C_WHITE), (SCREEN_SIZE[0] * 3 / 4 - 24, 10))
 
     # Draw players
     # First player
@@ -195,4 +196,4 @@ while GAME_RUNNING:
 
     pygame.display.update()
     GAME_CLOCK.tick(FPS)
-exit()
+sys.exit()
