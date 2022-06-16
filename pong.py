@@ -1,8 +1,8 @@
-from asyncio import events
 import pygame
 from pygame import time
 from pygame import draw
 from pygame import font
+from pygame import Rect
 import random
 import os
 import sys
@@ -12,7 +12,6 @@ Pong
 
 Remake of classic game by cd-con(eel-primo), 2022
 """
-
 # Init
 pygame.init()
 font.init()
@@ -34,7 +33,6 @@ SCREEN_SIZE = [800, 600]
 C_WHITE = (255,255,255)
 C_GRAY = (128,128,128)
 
-# TODO make custom 8-bit font
 FONT = pygame.font.Font(resource_path('font.ttf'), 30)
 
 # Setup pygame window
@@ -42,7 +40,7 @@ GAME_RUNNING = True
 GAME_CLOCK = time.Clock()
 GAME_DISPLAY = pygame.display.set_mode(tuple(SCREEN_SIZE))
 pygame.display.set_caption("Pong!")
-pygame.display.set_icon(pygame.image.load(resource_path('icons/icon_smooth.ico')))
+pygame.display.set_icon(pygame.image.load(resource_path('icons\\icon_smooth.ico')))
 
 # Player vars
 PLAYER_SIZE = (16,64)
@@ -60,6 +58,33 @@ def restart_game(reset_count = False):
     player1_pos, player2_pos = SCREEN_SIZE[1] / 2 - PLAYER_SIZE[1] / 2, SCREEN_SIZE[1] / 2 - PLAYER_SIZE[1] / 2
     ball_pos = [SCREEN_SIZE[0] / 2,SCREEN_SIZE[1] / 2 + 50 * random.randint(-2,2)]
     if reset_count: player1_score, player2_score = 0, 0; ball_dir = [bool(random.getrandbits(1)), bool(random.getrandbits(1))]
+
+# Handle collisions
+def intersect(obj, ball):
+    edges = dict(left=Rect(obj.left, obj.top, 1, obj.height), right=Rect(obj.right, obj.top, 1, obj.height),
+        top=Rect(obj.left, obj.top, obj.width, 1), bottom=Rect(obj.left, obj.bottom, obj.width, 1))
+    collisions = set(edge for edge, rect in edges.items() if ball.collidelist([rect]) > -1)
+
+    if not collisions: return None
+
+    if len(collisions) == 1:
+        return list(collisions)[0]
+
+    if 'top' in collisions:
+        if ball.centery >= obj.top:
+            return 'top'
+        if ball.centerx < obj.left:
+            return 'left'
+        else:
+            return 'right'
+
+    if 'bottom' in collisions:
+        if ball.centery >= obj.bottom:
+            return 'bottom'
+        if ball.centerx < obj.left:
+            return 'left'
+        else:
+            return 'right'
 
 restart_game()
 
@@ -195,10 +220,16 @@ while GAME_RUNNING:
     ball = draw.circle(GAME_DISPLAY, C_WHITE, tuple(ball_pos), 5, 1)
 
     # Check ball collision
-    # TODO Fix bug with stucking ball in platform
-    if ball.colliderect(p1) or ball.colliderect(p2):
-        bounce_count += 1
-        ball_dir[0] = not ball_dir[0]
+    if ball.collidelist([p1,p2]) > -1:
+        edge = intersect(p1, ball)
+        print("Edge1 = ", edge)
+        edge2 = intersect(p2, ball)
+        print("Edge2 = ", edge2)
+        if edge in ('top', 'bottom') or edge2 in ('top', 'bottom'):
+            ball_dir[0] = not ball_dir[0]
+            ball_dir[1] = not ball_dir[1]
+        elif edge == 'right' or edge2 == 'left':
+            ball_dir[0] = not ball_dir[0]
 
     # Draw line
     for x in range(int(SCREEN_SIZE[1] / 20)):
