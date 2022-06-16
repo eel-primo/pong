@@ -36,6 +36,7 @@ D_FONT = font.Font(resource_path('font.ttf'), 8)
 
 # Setup pygame window
 GAME_RUNNING = True
+DRAW_DEBUG = False
 GAME_CLOCK = time.Clock()
 GAME_DISPLAY = display.set_mode(tuple(SCREEN_SIZE))
 display.set_caption("Pong!")
@@ -51,31 +52,44 @@ ball_position = [0,0]
 ball_direction = [False, False]
 bounce_count = 0
 
+# Timer vars
+minutes = 0
+seconds = [0,0]
+
 # Restart game
 def restart_game(reset_count = False):
-    global first_player_y, second_player_y, first_player_score, second_player_score, ball_position, ball_direction
-    first_player_y, second_player_y = SCREEN_SIZE[1] / 2 - PLAYER_SIZE[1] / 2, SCREEN_SIZE[1] / 2 - PLAYER_SIZE[1] / 2
+    global first_player_y, second_player_y, first_player_score, second_player_score, \
+           ball_position, ball_direction, minutes, seconds, GAME_PAUSED
+    pygame.event.clear()
+    minutes = 0; seconds = [0,0]
+
+    first_player_y, second_player_y = SCREEN_SIZE[1] / 2 - PLAYER_SIZE[1] / 2, \
+                                      SCREEN_SIZE[1] / 2 - PLAYER_SIZE[1] / 2
     ball_position = [SCREEN_SIZE[0] / 2,SCREEN_SIZE[1] / 2 + 50 * random.randint(-2,2)]
-    if reset_count: first_player_score, second_player_score = 0, 0; ball_direction = [bool(random.getrandbits(1)), bool(random.getrandbits(1))]
+
+    if reset_count:
+        first_player_score, second_player_score = 0, 0
+        ball_direction = [bool(random.getrandbits(1)), bool(random.getrandbits(1))]
 
 # Handle collisions
 def intersect(obj, ball):
     # Debug
-    t_rect = Rect(obj.left - 3, obj.top - 3, obj.width + 6, 2)
+    t_rect = Rect(obj.left, obj.top - 3, obj.width, 2)
     b_rect = Rect(obj.left, obj.bottom + 2, obj.width, 2)
     l_rect = Rect(obj.left - 3, obj.top, 2, obj.height)
     r_rect = Rect(obj.right + 2, obj.top, 2, obj.height)
-    draw.rect(GAME_DISPLAY, C_DEBUG, t_rect)
-    draw.rect(GAME_DISPLAY, C_DEBUG, b_rect)
-    draw.rect(GAME_DISPLAY, C_DEBUG, l_rect)
-    draw.rect(GAME_DISPLAY, C_DEBUG, r_rect)
+    if DRAW_DEBUG:
+        draw.rect(GAME_DISPLAY, C_DEBUG, t_rect)
+        draw.rect(GAME_DISPLAY, C_DEBUG, b_rect)
+        draw.rect(GAME_DISPLAY, C_DEBUG, l_rect)
+        draw.rect(GAME_DISPLAY, C_DEBUG, r_rect)
 
     edges = dict(left = l_rect, right = r_rect,
         top = t_rect, bottom = b_rect)
     collisions = set(edge for edge, rect in edges.items() if ball.colliderect(rect))
     
     # Debug
-    GAME_DISPLAY.blit(D_FONT.render("Obj collisions with ball: " + str(list(collisions)), False, C_DEBUG),(5,15))
+    if DRAW_DEBUG: GAME_DISPLAY.blit(D_FONT.render("Obj collisions with ball: " + str(list(collisions)), False, C_DEBUG),(5,15))
     
     if not collisions: return None
 
@@ -98,6 +112,7 @@ def intersect(obj, ball):
         else:
             return 'right'
 
+time.set_timer(pygame.USEREVENT,1000)
 restart_game()
 
 # Main loop
@@ -113,10 +128,22 @@ while GAME_RUNNING:
             pygame.quit()
             GAME_RUNNING = False
 
+        if event.type == pygame.USEREVENT:
+            print(random.choice(['tick','tock','tack']))
+            seconds[1] += 1
+            if seconds[1] > 9: seconds[1] = 0; seconds[0] += 1
+            if seconds[0] == 5: seconds = [0,0]; minutes += 1
+
         # Reload game if 'R' button is pressed
         if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
             time.delay(1000)
             restart_game(True)
+        
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_F2:
+            DRAW_DEBUG = not DRAW_DEBUG
+        
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_F5: FPS += 5
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_F4: FPS -= 5
 
     """
     Proceed keyboard input and player control
@@ -127,9 +154,8 @@ while GAME_RUNNING:
     except pygame.error:
         sys.exit()
     # Debug
-    if keys[pygame.K_F5]: FPS += 5
-    if keys[pygame.K_F4]: FPS -= 5
-    GAME_DISPLAY.blit(D_FONT.render("Target FPS:" + str(FPS), False, C_DEBUG),(5,25))
+        
+    GAME_DISPLAY.blit(D_FONT.render("Target FPS:" + str(FPS), False, C_DEBUG),(5,0))
     
     target_player_speed = PLAYER_SPEED + bounce_count * 0.025
 
@@ -154,14 +180,14 @@ while GAME_RUNNING:
     if first_player_score == MAX_SCORE:
         GAME_DISPLAY.blit(FONT.render("Player 1 won!", False, C_WHITE), (SCREEN_SIZE[0] / 2 - 220 ,SCREEN_SIZE[1] / 2 - 120))
         display.update()
-        time.delay(5000)
+        time.delay(2000)
         restart_game(True)
             
     # If second player reach goal -> win!
     if second_player_score == MAX_SCORE:
         GAME_DISPLAY.blit(FONT.render("Player 2 won!", False, C_WHITE), (SCREEN_SIZE[0] / 2 - 220 ,SCREEN_SIZE[1] / 2 - 120))
         display.update()
-        time.delay(5000)
+        time.delay(2000)
         restart_game(True)
 
     """
@@ -189,10 +215,7 @@ while GAME_RUNNING:
     if ball_position[0] < BALL_SIZE * 2:
         second_player_score += 1
         bounce_count = 0
-
-        # Pass timer if last round
-        if not second_player_score == MAX_SCORE: time.wait(3000)
-        
+        time.wait(3000)        
         # Throw ball in side of second player
         ball_direction[0] = False
         restart_game()
@@ -200,11 +223,8 @@ while GAME_RUNNING:
     # Add a score for the first player if ball hit the right side of the screen
     if ball_position[0] + BALL_SIZE * 2 > SCREEN_SIZE[0]:
         first_player_score += 1     
-        bounce_count = 0   
-
-        # Pass timer if last round
-        if not first_player_score == MAX_SCORE: time.wait(3000)
-
+        bounce_count = 0 
+        time.delay(3000)
         # Throw ball in side of first player
         ball_direction[0] = True        
         restart_game()
@@ -239,17 +259,16 @@ while GAME_RUNNING:
     #if ball.collidelist([p1,p2]) > -1:
     edges = (intersect(p1, ball), intersect(p2, ball))
     if edges[0] in ('top', 'bottom') or edges[1] in ('top', 'bottom'):
-        ball_direction[0] = not ball_direction[0]
         ball_direction[1] = not ball_direction[1]
     elif edges[0] == 'right' or edges[1] == 'left':
         ball_direction[0] = not ball_direction[0]
 
     # Draw line
-    for x in range(int(SCREEN_SIZE[1] / 20)):
+    for x in range(int(SCREEN_SIZE[1] / 20) - 1):
         draw.rect(GAME_DISPLAY, C_GRAY, (SCREEN_SIZE[0] / 2, x * 20 + 3, 2, 10))
 
     # Debug
-    GAME_DISPLAY.blit(D_FONT.render("Ball pos: " + str(ball_position), False, C_DEBUG),(5,5))
-
+    if DRAW_DEBUG: GAME_DISPLAY.blit(D_FONT.render("Ball pos: " + str(ball_position), False, C_DEBUG),(5,30))
+    GAME_DISPLAY.blit(D_FONT.render(str(minutes) + ":" + str(seconds[0]) + str(seconds[1]), False, C_WHITE),(SCREEN_SIZE[0]/2 - 13, SCREEN_SIZE[1] * 31 / 32))
     pygame.display.update()
     GAME_CLOCK.tick(FPS)
