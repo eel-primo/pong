@@ -1,3 +1,4 @@
+from asyncio import events
 import pygame
 from pygame import time
 from pygame import draw
@@ -20,7 +21,7 @@ font.init()
 def resource_path(relative):
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative)
-    return os.path.join(relative)
+    return os.path.abspath(relative)
 
 # Configuration
 FPS = 30
@@ -41,6 +42,7 @@ GAME_RUNNING = True
 GAME_CLOCK = time.Clock()
 GAME_DISPLAY = pygame.display.set_mode(tuple(SCREEN_SIZE))
 pygame.display.set_caption("Pong!")
+pygame.display.set_icon(pygame.image.load(resource_path('icons/icon_smooth.ico')))
 
 # Player vars
 PLAYER_SIZE = (16,64)
@@ -67,10 +69,26 @@ while GAME_RUNNING:
     GAME_DISPLAY.fill((0,0,0))
 
     """
+    Proceed events from pygame
+    """
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            GAME_RUNNING = False
+
+        # Reload game if 'R' button is pressed
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+            pygame.time.delay(1000)
+            restart_game(True)
+
+    """
     Proceed keyboard input and player control
     Not the best solution
     """
-    keys = pygame.key.get_pressed()
+    try:
+        keys = pygame.key.get_pressed()
+    except pygame.error:
+        sys.exit()
     target_player_speed = PLAYER_SPEED + bounce_count * 0.025
 
     # First player control
@@ -107,7 +125,20 @@ while GAME_RUNNING:
     """
     Ball logic
     """
-    # Bounce off the
+    # Ball movement
+    # X-direction
+    if ball_dir[0]:
+        ball_pos[0] += BALL_SPEED + bounce_count * 0.1
+    else:
+        ball_pos[0] -= BALL_SPEED + bounce_count * 0.1
+
+    # Y-direction
+    if ball_dir[1]:
+        ball_pos[1] += BALL_SPEED + bounce_count * 0.1
+    else:
+        ball_pos[1] -= BALL_SPEED + bounce_count * 0.1
+
+    # Bounce off the side walls
     if  ball_pos[1] + BALL_SIZE * 2 > SCREEN_SIZE[1] or ball_pos[1] < BALL_SIZE * 2:
         bounce_count += 1
         ball_dir[1] = not ball_dir[1]
@@ -135,19 +166,6 @@ while GAME_RUNNING:
         # Throw ball in side of first player
         ball_dir[0] = True        
         restart_game()
-
-    # Ball movement
-    # X-direction
-    if ball_dir[0]:
-        ball_pos[0] += BALL_SPEED + bounce_count * 0.1
-    else:
-        ball_pos[0] -= BALL_SPEED + bounce_count * 0.1
-
-    # Y-direction
-    if ball_dir[1]:
-        ball_pos[1] += BALL_SPEED + bounce_count * 0.1
-    else:
-        ball_pos[1] -= BALL_SPEED + bounce_count * 0.1
 
     """
     Drawing graphics
@@ -186,14 +204,5 @@ while GAME_RUNNING:
     for x in range(int(SCREEN_SIZE[1] / 20)):
         draw.rect(GAME_DISPLAY, C_GRAY, (SCREEN_SIZE[0] / 2, x * 20 + 3, 2, 10))
 
-    """
-    Proceed events from pygame
-    """
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            GAME_RUNNING = False
-
     pygame.display.update()
     GAME_CLOCK.tick(FPS)
-sys.exit()
